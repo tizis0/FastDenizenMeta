@@ -1,6 +1,6 @@
 {
   "name": "fast-denizen-meta",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Лёгкая JavaScript-библиотека для локального парсинга, кэширования и поиска по мета-документации Denizen",
   "main": "src/index.js",
   "module": "src/index.js",

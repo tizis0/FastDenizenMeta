@@ -27,7 +27,7 @@ function levenshtein(a, b) {
 
 const DEFAULT_URL = "https://github.com/DenizenScript/Denizen/archive/dev.zip";
 
-export class FastDenizenMeta {
+class FastDenizenMeta {
   constructor(cacheFile = "meta_cache.json") {
     this.storage = new MetaStorage(cacheFile);
   }
@@ -175,4 +175,11 @@ export class FastDenizenMeta {
     return { status: "not_found", results: [] };
     }
 
+}
+
+export default FastDenizenMeta;
+export { FastDenizenMeta };
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { FastDenizenMeta };
 }

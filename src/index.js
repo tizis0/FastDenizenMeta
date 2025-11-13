@@ -179,7 +179,3 @@ class FastDenizenMeta {
 
 export default FastDenizenMeta;
 export { FastDenizenMeta };
-
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = { FastDenizenMeta };
-}

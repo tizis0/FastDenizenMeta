@@ -31,9 +31,8 @@
   "license": "MIT",
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "node-fetch": "^3.3.2"
-  },
-  "devDependencies": {
-    "tsup": "^8.2.2"
+    "node-fetch": "^3.3.2",
+    "typescript": "^5.9.3",
+    "tsup": "^8.5.1"
   }
 }

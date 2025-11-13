@@ -1,0 +1,23 @@
+{
+  "name": "FastDenizenMeta",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node example/example.js"
+  },
+  "keywords": [
+    "denizen",
+    "minecraft",
+    "script",
+    "metadocs",
+    "search"
+  ],
+  "author": "tizis0",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "node-fetch": "^3.3.2"
+  }
+}

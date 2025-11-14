@@ -8,16 +8,20 @@ function parseBlock(blockText, type) {
   const lines = blockText.split("\n");
   const result = { type };
 
-  if (type === "data") return null; // Чесно, я вообще хз для чего добавили data, он нахуй никому не нужен и даже в мете его нет
+  if (type === "data") return null;
 
   let currentTag = null;
   let buffer = [];
 
   for (const lineRaw of lines) {
-    const line = lineRaw.trim().replace(/^\/\/\s?/, "");
-    if (!line) continue;
+    // Убираем только // в начале строки, но оставляем # и другой контент
+    const line = lineRaw.trim();
+    const isCommentLine = line.startsWith("//");
+    const processedLine = isCommentLine ? line.replace(/^\/\/\s?/, "") : line;
 
-    if (line.startsWith("@")) {
+    if (!processedLine) continue;
+
+    if (isCommentLine && processedLine.startsWith("@")) {
       if (currentTag) {
         const content = buffer.join("\n").trim();
         if (content) {
@@ -33,8 +37,7 @@ function parseBlock(blockText, type) {
         }
       }
 
-
-      const [key, ...rest] = line.slice(1).split(" ");
+      const [key, ...rest] = processedLine.slice(1).split(" ");
       const value = rest.join(" ").trim();
 
       currentTag = key.toLowerCase();
@@ -52,15 +55,16 @@ function parseBlock(blockText, type) {
         result.syntax = value;
         currentTag = null;
       } else if (currentTag === "events") {
-
         buffer = [];
       }
 
       continue;
     }
 
-
-    if (currentTag) buffer.push(line);
+    if (currentTag) {
+      // Сохраняем оригинальную строку в буфер
+      buffer.push(lineRaw);
+    }
   }
 
   if (currentTag && buffer.length) {
@@ -89,10 +93,6 @@ function parseBlock(blockText, type) {
 
   return result;
 }
-
-
-
-
 
 export function parseJavaFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");

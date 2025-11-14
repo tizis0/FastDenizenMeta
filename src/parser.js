@@ -8,10 +8,11 @@ function parseBlock(blockText, type) {
   const lines = blockText.split("\n");
   const result = { type };
 
-  if (type === "data") return null; // Чесно, я вообще хз для чего добавили data, он нахуй никому не нужен и даже в мете его нет
+  if (type === "data") return null;
 
   let currentTag = null;
   let buffer = [];
+  let isFirstUsageContent = false;
 
   for (const lineRaw of lines) {
     const line = lineRaw.trim().replace(/^\/\/\s?/, "");
@@ -33,33 +34,36 @@ function parseBlock(blockText, type) {
         }
       }
 
-
       const [key, ...rest] = line.slice(1).split(" ");
       const value = rest.join(" ").trim();
 
       currentTag = key.toLowerCase();
       buffer = [];
+      isFirstUsageContent = (currentTag === "usage");
 
       if (currentTag === "attribute" && value.startsWith("<") && value.endsWith(">")) {
         const match = value.match(/\.?([^\.\[]+)\[/);
         result.name = match ? match[1] : value.replace(/[<>]/g, "");
         result.syntax = value;
         currentTag = null;
+        isFirstUsageContent = false;
       } else if (currentTag === "name") {
         result.name = value;
         currentTag = null;
+        isFirstUsageContent = false;
       } else if (currentTag === "syntax") {
         result.syntax = value;
         currentTag = null;
+        isFirstUsageContent = false;
       } else if (currentTag === "events") {
-
         buffer = [];
+        isFirstUsageContent = false;
       }
 
       continue;
     }
 
-
+    // Добавляем хештег к первому контенту в блоке usage
     if (currentTag === "usage" && isFirstUsageContent && line && !line.startsWith("#")) {
       buffer.push("# " + line);
       isFirstUsageContent = false;
@@ -94,10 +98,6 @@ function parseBlock(blockText, type) {
 
   return result;
 }
-
-
-
-
 
 export function parseJavaFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");

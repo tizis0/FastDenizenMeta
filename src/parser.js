@@ -16,11 +16,21 @@ function parseBlock(blockText, type) {
 
   for (const lineRaw of lines) {
     const line = lineRaw.trim().replace(/^\/\/\s?/, "");
-    if (!line) continue;
+    
+    if (!line) {
+      if (currentTag === "description") {
+        buffer.push("");
+      }
+      continue;
+    }
 
     if (line.startsWith("@")) {
       if (currentTag) {
-        const content = buffer.join("\n").trim();
+        let content = buffer.join("\n");
+        if (currentTag !== 'description') {
+          content = content.trim();
+        }
+
         if (content) {
           if (result[currentTag]) {
             if (Array.isArray(result[currentTag])) {
@@ -63,7 +73,6 @@ function parseBlock(blockText, type) {
       continue;
     }
 
-    // Добавляем хештег к первому контенту в блоке usage
     if (currentTag === "usage" && isFirstUsageContent && line && !line.startsWith("#")) {
       buffer.push("# " + line);
       isFirstUsageContent = false;
@@ -73,7 +82,11 @@ function parseBlock(blockText, type) {
   }
 
   if (currentTag && buffer.length) {
-    const content = buffer.join("\n").trim();
+    let content = buffer.join("\n");
+    if (currentTag !== 'description') {
+      content = content.trim();
+    }
+    
     if (content) {
       if (result[currentTag]) {
         if (Array.isArray(result[currentTag])) {

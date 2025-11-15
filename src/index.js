@@ -140,7 +140,7 @@ class FastDenizenMeta {
         const events = entry.events?.join(" ").toLowerCase() || "";
 
         for (const w of qWords) {
-            if (nameLower === qWords.join("_")) score += 50;
+            if (nameLower === qWords.join("_") || nameLower === qWords.join(" ")) score += 50;
             else if (events === qWords.join(" ")) score += 50;
             else if (nameLower === w) score += 10;
             else if (nameLower.includes(w)) score += 5;

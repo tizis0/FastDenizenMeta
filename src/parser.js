@@ -16,7 +16,7 @@ function parseBlock(blockText, type) {
 
   for (const lineRaw of lines) {
     const line = lineRaw.trim().replace(/^\/\/\s?/, "");
-    
+
     if (!line) {
       if (currentTag === "description") {
         buffer.push("");
@@ -48,7 +48,7 @@ function parseBlock(blockText, type) {
       const value = rest.join(" ").trim();
 
       currentTag = key.toLowerCase();
-      buffer = [];
+      buffer = value ? [value] : [];
       isFirstUsageContent = (currentTag === "usage");
 
       if (currentTag === "attribute" && value.startsWith("<") && value.endsWith(">")) {
@@ -57,14 +57,17 @@ function parseBlock(blockText, type) {
         result.syntax = value;
         currentTag = null;
         isFirstUsageContent = false;
+        buffer = [];
       } else if (currentTag === "name") {
         result.name = value;
         currentTag = null;
         isFirstUsageContent = false;
+        buffer = [];
       } else if (currentTag === "syntax") {
         result.syntax = value;
         currentTag = null;
         isFirstUsageContent = false;
+        buffer = [];
       } else if (currentTag === "events") {
         buffer = [];
         isFirstUsageContent = false;
@@ -80,7 +83,6 @@ function parseBlock(blockText, type) {
       buffer.push(line);
     }
   }
-
   if (currentTag && buffer.length) {
     let content = buffer.join("\n");
     if (currentTag !== 'description') {
@@ -130,10 +132,11 @@ export function parseJavaFile(filePath) {
         }
         block.push(lines[j]);
       }
-      const parsed = parseBlock(block.join("\n"));
-      parsed.type = type;
-      parsed.file = path.basename(filePath);
-      results.push(parsed);
+      const parsed = parseBlock(block.join("\n"), type);
+      if (parsed) {
+          parsed.file = path.basename(filePath);
+          results.push(parsed);
+      }
     }
   }
   return results;

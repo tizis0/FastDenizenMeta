@@ -16,7 +16,7 @@ function parseBlock(blockText, type) {
 
   for (const lineRaw of lines) {
     const line = lineRaw.trim().replace(/^\/\/\s?/, "");
-
+    
     if (!line) {
       if (currentTag === "description") {
         buffer.push("");
@@ -52,22 +52,28 @@ function parseBlock(blockText, type) {
       isFirstUsageContent = (currentTag === "usage");
 
       if (currentTag === "attribute" && value.startsWith("<") && value.endsWith(">")) {
-        const match = value.match(/\.?([^\.\[]+)\[/);
-        result.name = match ? match[1] : value.replace(/[<>]/g, "");
+        const cleanedValue = value.substring(1, value.length - 1);
+        const firstDotIndex = cleanedValue.indexOf('.');
+        
+        if (firstDotIndex !== -1) {
+            const namePart = cleanedValue.substring(firstDotIndex + 1);
+            result.name = namePart.replace(/\[.*?\]/g, '');
+        } else {
+            result.name = cleanedValue.replace(/\[.*?\]/g, '');
+        }
+
         result.syntax = value;
         currentTag = null;
-        isFirstUsageContent = false;
         buffer = [];
+        isFirstUsageContent = false;
       } else if (currentTag === "name") {
         result.name = value;
         currentTag = null;
         isFirstUsageContent = false;
-        buffer = [];
       } else if (currentTag === "syntax") {
         result.syntax = value;
         currentTag = null;
         isFirstUsageContent = false;
-        buffer = [];
       } else if (currentTag === "events") {
         buffer = [];
         isFirstUsageContent = false;
@@ -83,6 +89,7 @@ function parseBlock(blockText, type) {
       buffer.push(line);
     }
   }
+
   if (currentTag && buffer.length) {
     let content = buffer.join("\n");
     if (currentTag !== 'description') {
@@ -117,9 +124,8 @@ function parseBlock(blockText, type) {
 export function parseJavaFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8");
   const results = [];
-  let match;
-
   const lines = content.split("\n");
+  
   for (let i = 0; i < lines.length; i++) {
     const startMatch = lines[i].match(blockStart);
     if (startMatch) {
@@ -134,8 +140,8 @@ export function parseJavaFile(filePath) {
       }
       const parsed = parseBlock(block.join("\n"), type);
       if (parsed) {
-          parsed.file = path.basename(filePath);
-          results.push(parsed);
+        parsed.file = path.basename(filePath);
+        results.push(parsed);
       }
     }
   }

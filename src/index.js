@@ -60,21 +60,30 @@ class FastDenizenMeta {
    * 
    * Внимание! Загрузка одного и того же источника не тестировалась и может вызвать ошибки и дубликаты.
    */
-  async addSource(url, pluginName = null) {
-    const tmpDir = path.join(os.tmpdir(), "fast_denizen_meta_addon");
-    await downloadAndExtractZip(url, tmpDir);
-    const blocks = parseDirectory(tmpDir);
-    if (pluginName) {
-      const blocksWithPlugin = blocks.map(block => ({
+async addSource(url, pluginName = null) {
+  const tmpDir = path.join(os.tmpdir(), "fast_denizen_meta_addon");
+  await downloadAndExtractZip(url, tmpDir);
+  const blocks = parseDirectory(tmpDir);
+
+  if (pluginName) {
+    const blocksWithPlugin = blocks.map(block => {
+      const existingPlugins = block.plugin
+        ? block.plugin.split(',').map(p => p.trim()).filter(Boolean)
+        : [];
+      const allPluginsSet = new Set(existingPlugins);
+      allPluginsSet.add(pluginName.trim());
+      return {
         ...block,
-        plugin: pluginName
-      }));
-      
-      this.storage.addMany(blocksWithPlugin);
-      return
-    }
-    this.storage.addMany(blocks);
+        plugin: [...allPluginsSet].join(', ')
+      };
+    });
+
+    this.storage.addMany(blocksWithPlugin);
+    return;
   }
+
+  this.storage.addMany(blocks);
+}
 
   /**
    * Поиск по ключевому слову и типу, если он указан

@@ -56,13 +56,23 @@ class FastDenizenMeta {
    * ### Добавляет источник меты.
    * 
    * @param {string} url - прямая ссылка на скачивание исходного кода.
+   * @param {string} pluginName - название плагина. Будет добавлено как plugin: <название>
    * 
    * Внимание! Загрузка одного и того же источника не тестировалась и может вызвать ошибки и дубликаты.
    */
-  async addSource(url) {
+  async addSource(url, pluginName = null) {
     const tmpDir = path.join(os.tmpdir(), "fast_denizen_meta_addon");
     await downloadAndExtractZip(url, tmpDir);
     const blocks = parseDirectory(tmpDir);
+    if (pluginName) {
+      const blocksWithPlugin = blocks.map(block => ({
+        ...block,
+        plugin: pluginName
+      }));
+      
+      this.storage.addMany(blocksWithPlugin);
+      return
+    }
     this.storage.addMany(blocks);
   }
 

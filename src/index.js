@@ -133,68 +133,117 @@ async addSource(url, pluginName = null) {
    * Пример:
    * @example meta.searchSmart("blocks flagged") // Найдет тег blocks_flagged
    */
+  /**
+ * УМНЫЙ поиск по ключевому слову и типу, если он указан
+ * @param {string} query - поисковый запрос
+ * @param {string} [type] - тип ("mechanism", "command", и тд)
+ *
+ * ## ИЩЕТ ПО НАЗВАНИЮ И СОБЫТИЯМ
+ *
+ * Умный поиск применяет улучшенные алгоритмы для обработки
+ * неточных поисковых запросов, включая опечатки и неполные слова.
+ * @example
+ * meta.searchSmart("item script contaner") // Найдет "Item Script Containers"
+ * meta.searchSmart("falg") // Найдет команду "flag"
+ */
   searchSmart(query, type = null) {
-    const qWords = query.toLowerCase().split(/\s+/).filter(Boolean);
+      const qWords = query.toLowerCase().split(/\s+/).filter(Boolean);
 
-    // сортiрiвка
-    const typePriority = [
-        "command",
-        "tag",
-        "mechanism",
-        "objecttype",
-        "event",
-        "language",
-        "action"
-    ];
-
-    let filtered = this.storage.data;
-
-    if (type) {
-        filtered = filtered.filter((x) => x.type?.toLowerCase() === type.toLowerCase());
-    }
-    const scored = filtered
-        .map((entry) => {
-        let score = 0;
-        const nameLower = (entry.name || "").toLowerCase();
-        const events = entry.events?.join(" ").toLowerCase() || "";
-
-        for (const w of qWords) {
-            if (nameLower === qWords.join("_") || nameLower === qWords.join(" ")) score += 50;
-            else if (events === qWords.join(" ")) score += 50;
-            else if (nameLower === w) score += 10;
-            else if (nameLower.includes(w)) score += 5;
-            else if (events.includes(w)) score += 1;
-        }
-
-        return { entry, score };
-        })
-        .filter((x) => x.score > 0)
-        .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        const aType = (a.entry.type || "").toLowerCase();
-        const bType = (b.entry.type || "").toLowerCase();
-        const aIndex = typePriority.indexOf(aType);
-        const bIndex = typePriority.indexOf(bType);
-        if (aIndex === -1 && bIndex === -1) return 0;
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-        });
-
-    if (scored.length) {
-        return { status: "ok", results: scored.map((x) => x.entry) };
-    }
-    const allNames = filtered.map((x) => x.name).filter(Boolean);
-    const suggestions = allNames
-        .map((n) => ({ n, dist: levenshtein(query.toLowerCase(), n.toLowerCase()) }))
-        .sort((a, b) => a.dist - b.dist);
-
-    if (suggestions.length && suggestions[0].dist <= 2) {
-        return { status: "suggestion", suggestion: suggestions[0].n, results: [] };
-    }
-
-    return { status: "not_found", results: [] };
-    }
+      const typePriority = [
+          "command",
+          "tag",
+          "mechanism",
+          "objecttype",
+          "event",
+          "language",
+          "action"
+      ];
+  
+      let filtered = this.storage.data;
+  
+      if (type) {
+          filtered = filtered.filter((x) => x.type?.toLowerCase() === type.toLowerCase());
+      }
+  
+      const scored = filtered
+          .map((entry) => {
+              let score = 0;
+              const nameLower = (entry.name || "").toLowerCase();
+              const nameWords = nameLower.split(/[\s_]+/);
+              const eventsLower = entry.events?.join(" ").toLowerCase() || "";
+  
+              let wordsFound = 0;
+              if (nameLower === qWords.join(" ") || nameLower === qWords.join("_")) {
+                  score += 100;
+              }
+              if (eventsLower === qWords.join(" ")) {
+                  score += 100;
+              }
+  
+              for (const qw of qWords) {
+                  let wordFound = false;
+                  for (const nw of nameWords) {
+                      const dist = levenshtein(qw, nw);
+  
+                      if (dist === 0) {
+                          score += 20;
+                          wordFound = true;
+                          break;
+                      }
+                      if (dist <= 2) {
+                          score += 15 - dist * 2;
+                          wordFound = true;
+                          break;
+                      }
+                      if (nw.includes(qw)) {
+                          score += 5;
+                          wordFound = true;
+                          break;
+                      }
+                  }
+                  if (wordFound) {
+                      wordsFound++;
+                  }
+              }
+              if (qWords.length > 1 && wordsFound === qWords.length) {
+                  score += 50;
+              }
+              for (const qw of qWords) {
+                  if (eventsLower.includes(qw)) {
+                      score += 1;
+                  }
+              }
+  
+              return { entry, score };
+          })
+          .filter((x) => x.score > 0)
+          .sort((a, b) => {
+              if (b.score !== a.score) return b.score - a.score;
+              const aType = (a.entry.type || "").toLowerCase();
+              const bType = (b.entry.type || "").toLowerCase();
+              const aIndex = typePriority.indexOf(aType);
+              const bIndex = typePriority.indexOf(bType);
+  
+              if (aIndex === -1 && bIndex === -1) return 0;
+              if (aIndex === -1) return 1;
+              if (bIndex === -1) return -1;
+              return aIndex - bIndex;
+          });
+  
+      if (scored.length) {
+          return { status: "ok", results: scored.map((x) => x.entry) };
+      }
+      const allNames = filtered.map((x) => x.name).filter(Boolean);
+      const suggestions = allNames
+          .map((n) => ({ n, dist: levenshtein(query.toLowerCase(), n.toLowerCase()) }))
+          .sort((a, b) => a.dist - b.dist);
+  
+      if (suggestions.length && suggestions[0].dist <= 2) {
+          return { status: "suggestion", suggestion: suggestions[0].n, results: [] };
+      }
+  
+      return { status: "not_found", results: [] };
+  }
 
 }
 

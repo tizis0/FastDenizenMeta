@@ -74,7 +74,7 @@ event: receives chunk unload
 | `reload()`                  | `string?`           | Загружает документацию из Denizen Dev, или указанного источника. |
 | `search(query, type?)`      | `string`, `string?` | Простой поиск по названию.                                       |
 | `searchSmart(query, type?)` | `string`, `string?` | Расширенный поиск с приоритетом типов и нечеткими совпадениями.  |
-| `addSource()`               | `string`, `string?` | Загружает дополнительный источник документации.                  |
+| `addSource(url, plugin?)`   | `string`, `string?` | Загружает дополнительный источник документации.                  |
 | `storage`                   | -                   | Возвращает полный JSON объект, содержащий кэш документации.      |
 
 ---

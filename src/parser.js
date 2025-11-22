@@ -116,6 +116,26 @@ function parseBlock(blockText, type) {
     }
   }
 
+  if (type === "property") {
+    const objectName = result.object || "UnknownObject";
+    const propertyName = result.name || "unknown";
+    const fullReference = `${objectName}.${propertyName}`;
+    const firstDescLine = (result.description ? result.description.split('\n')[0] : "").trim();
+
+    const tagResult = { ...result };
+    tagResult.type = "tag";
+    tagResult.name = fullReference;
+    tagResult.syntax = `<${fullReference}>`;
+    tagResult.mechanism = fullReference;
+
+    const mechResult = { ...result };
+    mechResult.type = "mechanism";
+    mechResult.name = propertyName;
+
+    mechResult.tags = `<${fullReference}> ${firstDescLine}`;
+    return [tagResult, mechResult];
+  }
+
   if (!result.name) result.name = "unknown";
 
   return result;
@@ -138,10 +158,16 @@ export function parseJavaFile(filePath) {
         }
         block.push(lines[j]);
       }
+      
       const parsed = parseBlock(block.join("\n"), type);
+      
       if (parsed) {
-        parsed.file = path.basename(filePath);
-        results.push(parsed);
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        
+        items.forEach(item => {
+          item.file = path.basename(filePath);
+          results.push(item);
+        });
       }
     }
   }

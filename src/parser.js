@@ -8,7 +8,7 @@ function parseBlock(blockText, type) {
   const lines = blockText.split("\n");
   const result = { type };
 
-  if (type === "data") return null;
+  if (type === "data" || type === "extension" ) return null;
 
   let currentTag = null;
   let buffer = [];

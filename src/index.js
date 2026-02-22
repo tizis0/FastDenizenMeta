@@ -147,102 +147,108 @@ async addSource(url, pluginName = null) {
  * meta.searchSmart("falg") // Найдет команду "flag"
  */
   searchSmart(query, type = null) {
-      const qWords = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const q = query.toLowerCase().trim();
+    const qWords = q.split(/\s+/).filter(Boolean);
 
-      const typePriority = [
-          "command",
-          "tag",
-          "mechanism",
-          "objecttype",
-          "event",
-          "language",
-          "action"
-      ];
-  
-      let filtered = this.storage.data;
-  
-      if (type) {
-          filtered = filtered.filter((x) => x.type?.toLowerCase() === type.toLowerCase());
-      }
-  
-      const scored = filtered
-          .map((entry) => {
-              let score = 0;
-              const nameLower = (entry.name || "").toLowerCase();
-              const nameWords = nameLower.split(/[\s_]+/);
-              const eventsLower = entry.events?.join(" ").toLowerCase() || "";
-  
-              let wordsFound = 0;
-              if (nameLower === qWords.join(" ") || nameLower === qWords.join("_")) {
-                  score += 100;
-              }
-              if (eventsLower === qWords.join(" ")) {
-                  score += 100;
-              }
-  
-              for (const qw of qWords) {
-                  let wordFound = false;
-                  for (const nw of nameWords) {
-                      const dist = levenshtein(qw, nw);
-  
-                      if (dist === 0) {
-                          score += 20;
-                          wordFound = true;
-                          break;
-                      }
-                      if (dist <= 2) {
-                          score += 15 - dist * 2;
-                          wordFound = true;
-                          break;
-                      }
-                      if (nw.includes(qw)) {
-                          score += 5;
-                          wordFound = true;
-                          break;
-                      }
-                  }
-                  if (wordFound) {
-                      wordsFound++;
-                  }
-              }
-              if (qWords.length > 1 && wordsFound === qWords.length) {
-                  score += 50;
-              }
-              for (const qw of qWords) {
-                  if (eventsLower.includes(qw)) {
-                      score += 1;
-                  }
-              }
-  
-              return { entry, score };
-          })
-          .filter((x) => x.score > 0)
-          .sort((a, b) => {
-              if (b.score !== a.score) return b.score - a.score;
-              const aType = (a.entry.type || "").toLowerCase();
-              const bType = (b.entry.type || "").toLowerCase();
-              const aIndex = typePriority.indexOf(aType);
-              const bIndex = typePriority.indexOf(bType);
-  
-              if (aIndex === -1 && bIndex === -1) return 0;
-              if (aIndex === -1) return 1;
-              if (bIndex === -1) return -1;
-              return aIndex - bIndex;
-          });
-  
-      if (scored.length) {
-          return { status: "ok", results: scored.map((x) => x.entry) };
-      }
-      const allNames = filtered.map((x) => x.name).filter(Boolean);
-      const suggestions = allNames
-          .map((n) => ({ n, dist: levenshtein(query.toLowerCase(), n.toLowerCase()) }))
-          .sort((a, b) => a.dist - b.dist);
-  
-      if (suggestions.length && suggestions[0].dist <= 2) {
-          return { status: "suggestion", suggestion: suggestions[0].n, results: [] };
-      }
-  
-      return { status: "not_found", results: [] };
+    const typePriority = [
+      "command",
+      "tag",
+      "mechanism",
+      "objecttype",
+      "event",
+      "language",
+      "action"
+    ];
+
+    let filtered = this.storage.data;
+    if (type) {
+      filtered = filtered.filter((x) => x.type?.toLowerCase() === type.toLowerCase());
+    }
+
+    const scored = filtered
+      .map((entry) => {
+        let score = 0;
+        const nameLower = (entry.name || "").toLowerCase();
+        const nameClean = nameLower.startsWith('.') ? nameLower.slice(1) : nameLower;
+        const eventsLower = entry.events?.join(" ").toLowerCase() || "";
+
+        if (nameLower === q || nameClean === q) {
+          score += 200;
+        }
+
+        if (nameLower.startsWith(q) || nameClean.startsWith(q)) {
+          score += 120;
+        } else if (nameLower.includes(q) || nameClean.includes(q)) {
+          score += 40;
+        }
+
+        const nameWords = nameLower.split(/[\s_.]+/).filter(Boolean);
+        let wordsMatched = 0;
+
+        for (const qw of qWords) {
+          let bestWordScore = 0;
+          for (const nw of nameWords) {
+            const dist = levenshtein(qw, nw);
+            if (dist === 0) {
+              bestWordScore = Math.max(bestWordScore, 30);
+            } else if (dist <= 2) {
+              bestWordScore = Math.max(bestWordScore, 20 - dist * 5);
+            } else if (nw.startsWith(qw)) {
+              bestWordScore = Math.max(bestWordScore, 15);
+            } else if (nw.includes(qw)) {
+              bestWordScore = Math.max(bestWordScore, 5);
+            }
+          }
+          if (bestWordScore > 0) {
+            score += bestWordScore;
+            wordsMatched++;
+          }
+        }
+
+        if (qWords.length > 1 && wordsMatched === qWords.length) {
+          score += 50;
+        }
+
+        if (eventsLower.includes(q)) {
+          score += 20;
+        }
+
+        if (score > 0) {
+          const lengthDiff = Math.abs(nameLower.length - q.length);
+          score -= lengthDiff * 0.5;
+        }
+
+        return { entry, score };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        
+        const aType = (a.entry.type || "").toLowerCase();
+        const bType = (b.entry.type || "").toLowerCase();
+        const aIndex = typePriority.indexOf(aType);
+        const bIndex = typePriority.indexOf(bType);
+
+        const pA = aIndex === -1 ? 999 : aIndex;
+        const pB = bIndex === -1 ? 999 : bIndex;
+        
+        return pA - pB;
+      });
+
+    if (scored.length) {
+      return { status: "ok", results: scored.map((x) => x.entry) };
+    }
+
+    const allNames = filtered.map((x) => x.name).filter(Boolean);
+    const suggestions = allNames
+      .map((n) => ({ n, dist: levenshtein(q, n.toLowerCase()) }))
+      .sort((a, b) => a.dist - b.dist);
+
+    if (suggestions.length && suggestions[0].dist <= 2) {
+      return { status: "suggestion", suggestion: suggestions[0].n, results: [] };
+    }
+
+    return { status: "not_found", results: [] };
   }
 
 }
